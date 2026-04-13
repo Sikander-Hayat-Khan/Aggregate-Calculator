@@ -9,7 +9,7 @@ BASE_URL = "https://qalam.nust.edu.pk"
 
 class LoginRequest(BaseModel):
     username_1: str
-    password_1: s`tr
+    password_1: str
     username_2: str
     password_2: str
 

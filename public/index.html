@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,12 +8,39 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
-        .glass { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.3); }
-        .loader { border: 3px solid #f3f3f3; border-top: 3px solid #3b82f6; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3b82f6;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
     </style>
 </head>
+
 <body class="min-h-screen flex items-center justify-center p-4 antialiased text-gray-800">
 
     <div class="max-w-4xl w-full mx-auto space-y-8">
@@ -25,19 +53,19 @@
         <!-- Main Card -->
         <div class="glass shadow-2xl rounded-2xl p-6 md:p-8">
             <form id="calcForm" class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                
+
                 <!-- User 1 -->
                 <div class="space-y-4">
                     <h2 class="text-xl font-semibold text-blue-600 border-b pb-2">Your Credentials</h2>
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Username</label>
-                        <input type="text" id="username1" required placeholder="e.g. smthn.bese23seecs" 
-                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-4 py-2 border bg-white/50">
+                        <input type="text" id="username1" required placeholder="e.g. smthn.bese23seecs"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-4 py-2 border bg-white/50">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Password</label>
-                        <input type="password" id="password1" required placeholder="••••••••" 
-                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-4 py-2 border bg-white/50">
+                        <input type="password" id="password1" required placeholder="••••••••"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-4 py-2 border bg-white/50">
                     </div>
                 </div>
 
@@ -46,18 +74,19 @@
                     <h2 class="text-xl font-semibold text-purple-600 border-b pb-2">Compare Profile (Optional)</h2>
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Competitor Username</label>
-                        <input type="text" id="username2" placeholder="e.g. other.bese23seecs" 
-                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 px-4 py-2 border bg-white/50">
+                        <input type="text" id="username2" placeholder="e.g. other.bese23seecs"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 px-4 py-2 border bg-white/50">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Competitor Password</label>
-                        <input type="password" id="password2" placeholder="••••••••" 
-                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 px-4 py-2 border bg-white/50">
+                        <input type="password" id="password2" placeholder="••••••••"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 px-4 py-2 border bg-white/50">
                     </div>
                 </div>
 
                 <div class="md:col-span-2 mt-4">
-                    <button type="submit" id="submitBtn" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
+                    <button type="submit" id="submitBtn"
+                        class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
                         <span id="btnText">Calculate Aggregates</span>
                         <div id="btnLoader" class="loader hidden ml-2"></div>
                     </button>
@@ -79,7 +108,7 @@
     <script>
         document.getElementById('calcForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const btnText = document.getElementById('btnText');
             const btnLoader = document.getElementById('btnLoader');
             const submitBtn = document.getElementById('submitBtn');
@@ -123,7 +152,7 @@
 
                 data.results.forEach(course => {
                     const hasPeer = Object.keys(course.user2.lecture).length > 0;
-                    
+
                     let html = `
                         <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
                             <div class="bg-blue-50 px-4 py-3 border-b border-gray-100 flex justify-between items-center">
@@ -134,7 +163,7 @@
                     `;
 
                     // Lecture stats
-                    if(course.user1.lecture && course.user1.lecture.agg) {
+                    if (course.user1.lecture && course.user1.lecture.agg) {
                         html += `
                             <div>
                                 <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Lecture</p>
@@ -152,7 +181,7 @@
                     }
 
                     // Lab stats
-                    if(course.user1.lab && course.user1.lab.agg) {
+                    if (course.user1.lab && course.user1.lab.agg) {
                         html += `
                             <div class="pt-2 border-t border-gray-100">
                                 <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Lab</p>
@@ -186,4 +215,5 @@
         });
     </script>
 </body>
+
 </html>
