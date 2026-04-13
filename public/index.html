@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qalam Aggregate Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .glass { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.3); }
+        .loader { border: 3px solid #f3f3f3; border-top: 3px solid #3b82f6; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4 antialiased text-gray-800">
+
+    <div class="max-w-4xl w-full mx-auto space-y-8">
+        <!-- Header -->
+        <div class="text-center space-y-2">
+            <h1 class="text-3xl md:text-5xl font-bold tracking-tight text-gray-900">Aggregate Calculator</h1>
+            <p class="text-gray-500">Calculate and compare NUST Qalam aggregates easily.</p>
+        </div>
+
+        <!-- Main Card -->
+        <div class="glass shadow-2xl rounded-2xl p-6 md:p-8">
+            <form id="calcForm" class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                
+                <!-- User 1 -->
+                <div class="space-y-4">
+                    <h2 class="text-xl font-semibold text-blue-600 border-b pb-2">Your Credentials</h2>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Username</label>
+                        <input type="text" id="username1" required placeholder="e.g. smthn.bese23seecs" 
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-4 py-2 border bg-white/50">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Password</label>
+                        <input type="password" id="password1" required placeholder="••••••••" 
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-4 py-2 border bg-white/50">
+                    </div>
+                </div>
+
+                <!-- User 2 (Optional) -->
+                <div class="space-y-4">
+                    <h2 class="text-xl font-semibold text-purple-600 border-b pb-2">Compare Profile (Optional)</h2>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Competitor Username</label>
+                        <input type="text" id="username2" placeholder="e.g. other.bese23seecs" 
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 px-4 py-2 border bg-white/50">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Competitor Password</label>
+                        <input type="password" id="password2" placeholder="••••••••" 
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 px-4 py-2 border bg-white/50">
+                    </div>
+                </div>
+
+                <div class="md:col-span-2 mt-4">
+                    <button type="submit" id="submitBtn" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
+                        <span id="btnText">Calculate Aggregates</span>
+                        <div id="btnLoader" class="loader hidden ml-2"></div>
+                    </button>
+                    <p id="errorMsg" class="mt-2 text-sm text-red-600 text-center hidden"></p>
+                </div>
+            </form>
+        </div>
+
+        <!-- Results Section -->
+        <div id="resultsContainer" class="hidden space-y-6">
+            <h2 class="text-2xl font-bold text-gray-900 border-b pb-2">Results</h2>
+            <div id="coursesList" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Data will be injected here -->
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        document.getElementById('calcForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const btnText = document.getElementById('btnText');
+            const btnLoader = document.getElementById('btnLoader');
+            const submitBtn = document.getElementById('submitBtn');
+            const errorMsg = document.getElementById('errorMsg');
+            const resultsContainer = document.getElementById('resultsContainer');
+            const coursesList = document.getElementById('coursesList');
+
+            // Reset UI
+            errorMsg.classList.add('hidden');
+            resultsContainer.classList.add('hidden');
+            coursesList.innerHTML = '';
+            submitBtn.disabled = true;
+            btnText.textContent = 'Crunching Numbers...';
+            btnLoader.classList.remove('hidden');
+
+            const payload = {
+                username_1: document.getElementById('username1').value,
+                password_1: document.getElementById('password1').value,
+                username_2: document.getElementById('username2').value || '',
+                password_2: document.getElementById('password2').value || ''
+            };
+
+            try {
+                const response = await fetch('/api/calculate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const rawText = await response.text();
+                let data;
+                try {
+                    data = JSON.parse(rawText);
+                } catch (err) {
+                    throw new Error("Received an HTML response instead of JSON. Ensure you are running this through 'vercel dev' or the deployed Vercel URL, and not just a standard static server (like Live Server).");
+                }
+
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Failed to calculate aggregates');
+                }
+
+                data.results.forEach(course => {
+                    const hasPeer = Object.keys(course.user2.lecture).length > 0;
+                    
+                    let html = `
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
+                            <div class="bg-blue-50 px-4 py-3 border-b border-gray-100 flex justify-between items-center">
+                                <h3 class="font-semibold text-blue-900 truncate pr-2">${course.name}</h3>
+                                <span class="bg-blue-200 text-blue-800 text-xs px-2 py-1 rounded-full font-medium whitespace-nowrap">${course.credits} CH</span>
+                            </div>
+                            <div class="p-4 space-y-4">
+                    `;
+
+                    // Lecture stats
+                    if(course.user1.lecture && course.user1.lecture.agg) {
+                        html += `
+                            <div>
+                                <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Lecture</p>
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-700">Your Agg: <span class="font-bold text-gray-900">${course.user1.lecture.agg}%</span></span>
+                                    <span class="text-gray-500">Class Avg: ${course.user1.lecture.class_avg}%</span>
+                                </div>
+                                ${hasPeer && course.user2.lecture.agg ? `
+                                <div class="flex justify-between text-sm mt-1 text-purple-700 bg-purple-50 p-1 rounded">
+                                    <span>Peer Agg: <span class="font-bold">${course.user2.lecture.agg}%</span></span>
+                                    <span class="opacity-75">Class Avg: ${course.user2.lecture.class_avg}%</span>
+                                </div>` : ''}
+                            </div>
+                        `;
+                    }
+
+                    // Lab stats
+                    if(course.user1.lab && course.user1.lab.agg) {
+                        html += `
+                            <div class="pt-2 border-t border-gray-100">
+                                <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Lab</p>
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-700">Your Agg: <span class="font-bold text-gray-900">${course.user1.lab.agg}%</span></span>
+                                    <span class="text-gray-500">Class Avg: ${course.user1.lab.class_avg}%</span>
+                                </div>
+                                ${hasPeer && course.user2.lab.agg ? `
+                                <div class="flex justify-between text-sm mt-1 text-purple-700 bg-purple-50 p-1 rounded">
+                                    <span>Peer Agg: <span class="font-bold">${course.user2.lab.agg}%</span></span>
+                                    <span class="opacity-75">Class Avg: ${course.user2.lab.class_avg}%</span>
+                                </div>` : ''}
+                            </div>
+                        `;
+                    }
+
+                    html += `</div></div>`;
+                    coursesList.insertAdjacentHTML('beforeend', html);
+                });
+
+                resultsContainer.classList.remove('hidden');
+
+            } catch (error) {
+                errorMsg.textContent = error.message;
+                errorMsg.classList.remove('hidden');
+            } finally {
+                submitBtn.disabled = false;
+                btnText.textContent = 'Calculate Aggregates';
+                btnLoader.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
