@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import requests
 from bs4 import BeautifulSoup
+from concurrent.futures import ThreadPoolExecutor
 
 app = FastAPI()
 
@@ -130,27 +131,49 @@ def calculate_aggregate(session, course_id):
 
 @app.post("/api/calculate")
 def calculate_aggregates(req: LoginRequest):
-    session1 = create_session(req.username_1, req.password_1)
+    # Fetch sessions concurrently
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        f1 = executor.submit(create_session, req.username_1, req.password_1)
+        f2 = executor.submit(create_session, req.username_2, req.password_2) if req.username_2 and req.password_2 else None
+        
+        session1 = f1.result()
+        session2 = f2.result() if f2 else None
+
     if not session1:
         raise HTTPException(status_code=401, detail=f"Login failed for User 1: {req.username_1}")
 
-    session2 = create_session(req.username_2, req.password_2) if req.username_2 and req.password_2 else None
-    
-    courses1, courses1_ch = get_courses(session1)
+    # Fetch courses concurrently
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        fc1 = executor.submit(get_courses, session1)
+        fc2 = executor.submit(get_courses, session2) if session2 else None
+        
+        courses1, courses1_ch = fc1.result()
+        if fc2:
+            courses2, _ = fc2.result()
+            courses2_map = {name: id for id, name in courses2.items()}
+        else:
+            courses2_map = {}
+
     if not courses1:
         raise HTTPException(status_code=404, detail=f"No courses found for {req.username_1}")
 
-    courses2_map = {}
-    if session2:
-        courses2, _ = get_courses(session2)
-        courses2_map = {name: id for id, name in courses2.items()}
-
-    final_results = []
-
-    for course_id1, course_name in courses1.items():
+    def process_course(course_id1, course_name):
         ch = courses1_ch.get(course_name, 3)
-        res1 = calculate_aggregate(session1, course_id1)
-        if not res1: continue
+        
+        # We can also fetch the individual course grades currently
+        with ThreadPoolExecutor(max_workers=2) as inner_exec:
+            res1_future = inner_exec.submit(calculate_aggregate, session1, course_id1)
+            
+            res2_future = None
+            if session2:
+                course_id2 = courses2_map.get(course_name)
+                if course_id2:
+                    res2_future = inner_exec.submit(calculate_aggregate, session2, course_id2)
+            
+            res1 = res1_future.result()
+            res2 = res2_future.result() if res2_future else None
+
+        if not res1: return None
 
         course_item = {
             "name": course_name,
@@ -159,23 +182,30 @@ def calculate_aggregates(req: LoginRequest):
             "user2": {"lecture": {}, "lab": {}},
         }
 
-        # User 1 stats
         if 'lecture' in res1:
             course_item["user1"]["lecture"] = {"agg": round(res1["lecture"][0], 2), "class_avg": round(res1["lecture"][1], 2)}
         if 'lab' in res1:
             course_item["user1"]["lab"] = {"agg": round(res1["lab"][0], 2), "class_avg": round(res1["lab"][1], 2)}
 
-        # User 2 stats
-        if session2:
-            course_id2 = courses2_map.get(course_name)
-            if course_id2:
-                res2 = calculate_aggregate(session2, course_id2)
-                if res2:
-                    if 'lecture' in res2:
-                        course_item["user2"]["lecture"] = {"agg": round(res2["lecture"][0], 2), "class_avg": round(res2["lecture"][1], 2)}
-                    if 'lab' in res2:
-                        course_item["user2"]["lab"] = {"agg": round(res2["lab"][0], 2), "class_avg": round(res2["lab"][1], 2)}
+        if session2 and res2:
+            if 'lecture' in res2:
+                course_item["user2"]["lecture"] = {"agg": round(res2["lecture"][0], 2), "class_avg": round(res2["lecture"][1], 2)}
+            if 'lab' in res2:
+                course_item["user2"]["lab"] = {"agg": round(res2["lab"][0], 2), "class_avg": round(res2["lab"][1], 2)}
         
-        final_results.append(course_item)
+        return course_item
+
+    final_results = []
+    
+    # Process all courses completely concurrently
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        futures = []
+        for course_id1, course_name in courses1.items():
+            futures.append(executor.submit(process_course, course_id1, course_name))
+            
+        for future in futures:
+            result = future.result()
+            if result:
+                final_results.append(result)
 
     return {"results": final_results}
