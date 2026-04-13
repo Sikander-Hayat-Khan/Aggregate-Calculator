@@ -151,54 +151,95 @@
                 }
 
                 data.results.forEach(course => {
-                    const hasPeer = Object.keys(course.user2.lecture).length > 0;
+                    const hasPeer = Object.keys(course.user2.lecture || {}).length > 0 || Object.keys(course.user2.lab || {}).length > 0;
+                    const ch = course.credits;
+
+                    const getCombined = (lecture, lab, credits) => {
+                        const lectVal = lecture || 0;
+                        const labVal = lab || 0;
+                        if (credits === 0) return 0;
+                        return (lectVal * (credits - 1) / credits) + (labVal * 1 / credits);
+                    };
 
                     let html = `
                         <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
                             <div class="bg-blue-50 px-4 py-3 border-b border-gray-100 flex justify-between items-center">
                                 <h3 class="font-semibold text-blue-900 truncate pr-2">${course.name}</h3>
-                                <span class="bg-blue-200 text-blue-800 text-xs px-2 py-1 rounded-full font-medium whitespace-nowrap">${course.credits} CH</span>
+                                <span class="bg-blue-200 text-blue-800 text-xs px-2 py-1 rounded-full font-medium whitespace-nowrap">${ch} credit hours</span>
                             </div>
                             <div class="p-4 space-y-4">
                     `;
 
                     // Lecture stats
-                    if (course.user1.lecture && course.user1.lecture.agg) {
+                    let yourLectAgg = 0, yourLectClass = 0, otherLectClass = 0;
+                    if (course.user1.lecture && course.user1.lecture.agg !== undefined) {
+                        yourLectAgg = course.user1.lecture.agg;
+                        yourLectClass = course.user1.lecture.class_avg;
                         html += `
                             <div>
-                                <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Lecture</p>
                                 <div class="flex justify-between text-sm">
-                                    <span class="text-gray-700">Your Agg: <span class="font-bold text-gray-900">${course.user1.lecture.agg}%</span></span>
-                                    <span class="text-gray-500">Class Avg: ${course.user1.lecture.class_avg}%</span>
-                                </div>
-                                ${hasPeer && course.user2.lecture.agg ? `
-                                <div class="flex justify-between text-sm mt-1 text-purple-700 bg-purple-50 p-1 rounded">
-                                    <span>Peer Agg: <span class="font-bold">${course.user2.lecture.agg}%</span></span>
-                                    <span class="opacity-75">Class Avg: ${course.user2.lecture.class_avg}%</span>
-                                </div>` : ''}
-                            </div>
-                        `;
+                                    <span class="text-gray-700">Your Lecture: <span class="font-bold text-gray-900">${yourLectAgg.toFixed(2)}</span> <span class="text-gray-500">(Avg: ${yourLectClass.toFixed(2)})</span></span>
+                                </div>`;
+                        if (hasPeer && course.user2.lecture && course.user2.lecture.class_avg !== undefined) {
+                            otherLectClass = course.user2.lecture.class_avg;
+                            html += `
+                                <div class="flex justify-between text-sm mt-1">
+                                    <span class="text-gray-600">Other Lecture Avg: <span class="font-medium">${otherLectClass.toFixed(2)}</span></span>
+                                </div>`;
+                        }
+                        html += `</div>`;
                     }
 
                     // Lab stats
-                    if (course.user1.lab && course.user1.lab.agg) {
+                    let yourLabAgg = 0, yourLabClass = 0, otherLabClass = 0;
+                    const hasLab = course.user1.lab && course.user1.lab.agg !== undefined;
+                    if (hasLab) {
+                        yourLabAgg = course.user1.lab.agg;
+                        yourLabClass = course.user1.lab.class_avg;
                         html += `
                             <div class="pt-2 border-t border-gray-100">
-                                <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Lab</p>
                                 <div class="flex justify-between text-sm">
-                                    <span class="text-gray-700">Your Agg: <span class="font-bold text-gray-900">${course.user1.lab.agg}%</span></span>
-                                    <span class="text-gray-500">Class Avg: ${course.user1.lab.class_avg}%</span>
-                                </div>
-                                ${hasPeer && course.user2.lab.agg ? `
-                                <div class="flex justify-between text-sm mt-1 text-purple-700 bg-purple-50 p-1 rounded">
-                                    <span>Peer Agg: <span class="font-bold">${course.user2.lab.agg}%</span></span>
-                                    <span class="opacity-75">Class Avg: ${course.user2.lab.class_avg}%</span>
-                                </div>` : ''}
-                            </div>
-                        `;
+                                    <span class="text-gray-700">Your Lab: <span class="font-bold text-gray-900">${yourLabAgg.toFixed(2)}</span> <span class="text-gray-500">(Avg: ${yourLabClass.toFixed(2)})</span></span>
+                                </div>`;
+                        if (hasPeer && course.user2.lab && course.user2.lab.class_avg !== undefined) {
+                            otherLabClass = course.user2.lab.class_avg;
+                            html += `
+                                <div class="flex justify-between text-sm mt-1">
+                                    <span class="text-gray-600">Other Lab Avg: <span class="font-medium">${otherLabClass.toFixed(2)}</span></span>
+                                </div>`;
+                        }
+                        html += `</div>`;
                     }
 
-                    html += `</div></div>`;
+                    html += `<div class="pt-3 mt-3 border-t border-gray-200">`;
+
+                    if (hasLab) {
+                        const yourCombined = getCombined(yourLectAgg, yourLabAgg, ch);
+                        const yourCombinedClass = getCombined(yourLectClass, yourLabClass, ch);
+                        html += `
+                                <div class="flex justify-between text-sm text-blue-900 bg-blue-50 p-2 rounded">
+                                    <span>Your Combined: <span class="font-bold">${yourCombined.toFixed(2)}</span> <span class="text-gray-600">(Avg: ${yourCombinedClass.toFixed(2)})</span></span>
+                                </div>`;
+                        
+                        if (hasPeer) {
+                            const theirCombinedClass = getCombined(otherLectClass, otherLabClass, ch);
+                            const totalCombinedAvg = (yourCombinedClass + theirCombinedClass) / 2;
+                            html += `
+                                <div class="flex justify-between text-sm mt-2 text-purple-900 bg-purple-50 p-2 rounded font-medium">
+                                    <span>TOTAL COMBINED AVG: ${totalCombinedAvg.toFixed(2)}</span>
+                                </div>`;
+                        }
+                    } else {
+                        if (hasPeer) {
+                            const combinedAvg = (yourLectClass + otherLectClass) / 2;
+                            html += `
+                                <div class="flex justify-between text-sm text-purple-900 bg-purple-50 p-2 rounded font-medium">
+                                    <span>COMBINED AVG: ${combinedAvg.toFixed(2)}</span>
+                                </div>`;
+                        }
+                    }
+
+                    html += `</div></div></div>`;
                     coursesList.insertAdjacentHTML('beforeend', html);
                 });
 
