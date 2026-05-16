@@ -16,23 +16,37 @@ class LoginRequest(BaseModel):
 
 def create_session(username, password):
     session = requests.Session()
-    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Referer': f"{BASE_URL}/web/login",
+        'Origin': BASE_URL,
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1'
+    }
     try:
         login_page = session.get(f"{BASE_URL}/web/login", headers=headers, timeout=10)
         soup = BeautifulSoup(login_page.text, 'html.parser')
         
         csrf_input = soup.find('input', {'name': 'csrf_token'})
-        if not csrf_input: return None
+        if not csrf_input:
+            return None, "CSRF token not found"
         
         payload = {'login': username, 'password': password, 'csrf_token': csrf_input['value']}
         login_response = session.post(f"{BASE_URL}/web/login", data=payload, headers=headers, timeout=15)
         
+        # Odoo returns Wrong login in case of failure usually
+        if "Wrong login" in login_response.text or "wrong login" in login_response.text.lower():
+            return None, "Invalid credentials (Wrong login text found)"
+        
         dash_response = session.get(f"{BASE_URL}/student/dashboard", headers=headers, timeout=15)
-        if f"{BASE_URL}/web/login" not in dash_response.url:
-            return session
-    except:
-        pass
-    return None
+        if f"{BASE_URL}/web/login" in dash_response.url:
+            return None, "Redirected back to login (Session not authenticated)"
+            
+        return session, None
+    except Exception as e:
+        return None, f"Network or timeout error: {str(e)}"
 
 def get_courses(session):
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
@@ -137,11 +151,14 @@ def calculate_aggregates(req: LoginRequest):
         f1 = executor.submit(create_session, req.username_1, req.password_1)
         f2 = executor.submit(create_session, req.username_2, req.password_2) if req.username_2 and req.password_2 else None
         
-        session1 = f1.result()
-        session2 = f2.result() if f2 else None
+        session1, err1 = f1.result()
+        if f2:
+            session2, err2 = f2.result()
+        else:
+            session2 = None
 
     if not session1:
-        raise HTTPException(status_code=401, detail=f"Login failed for User 1: {req.username_1}")
+        raise HTTPException(status_code=401, detail=f"Login failed for User 1 ({req.username_1}): {err1}")
 
     # Fetch courses concurrently
     with ThreadPoolExecutor(max_workers=2) as executor:
