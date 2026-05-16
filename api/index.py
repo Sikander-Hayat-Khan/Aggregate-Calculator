@@ -27,7 +27,7 @@ def create_session(username, password):
         payload = {'login': username, 'password': password, 'csrf_token': csrf_input['value']}
         login_response = session.post(f"{BASE_URL}/web/login", data=payload, headers=headers, timeout=10)
         
-        if "Dashboard" in login_response.text or "Logout" in login_response.text:
+        if "Wrong login" not in login_response.text and "wrong login" not in login_response.text.lower():
             return session
     except:
         pass
