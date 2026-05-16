@@ -31,7 +31,8 @@ def create_session(username, password):
         
         csrf_input = soup.find('input', {'name': 'csrf_token'})
         if not csrf_input:
-            return None, "CSRF token not found"
+            page_title = soup.title.string if soup.title else 'No Title'
+            return None, f"CSRF token not found. The server may be blocking the request (e.g. Cloudflare). Page Title: {page_title}. Status: {login_page.status_code}"
         
         payload = {'login': username, 'password': password, 'csrf_token': csrf_input['value']}
         login_response = session.post(f"{BASE_URL}/web/login", data=payload, headers=headers, timeout=15)
