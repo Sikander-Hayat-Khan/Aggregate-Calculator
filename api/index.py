@@ -25,9 +25,10 @@ def create_session(username, password):
         if not csrf_input: return None
         
         payload = {'login': username, 'password': password, 'csrf_token': csrf_input['value']}
-        login_response = session.post(f"{BASE_URL}/web/login", data=payload, headers=headers, timeout=10)
+        login_response = session.post(f"{BASE_URL}/web/login", data=payload, headers=headers, timeout=15)
         
-        if "Wrong login" not in login_response.text and "wrong login" not in login_response.text.lower():
+        dash_response = session.get(f"{BASE_URL}/student/dashboard", headers=headers, timeout=15)
+        if f"{BASE_URL}/web/login" not in dash_response.url:
             return session
     except:
         pass
